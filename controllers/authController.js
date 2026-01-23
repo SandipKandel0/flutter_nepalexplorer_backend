@@ -1,22 +1,19 @@
 import User from '../models/User.js';
-import bcrypt from 'bcryptjs';
+import { hashPassword, comparePassword } from '../utils/passwordUtils.js';
+import { generateToken } from '../services/jwtService.js';
 
 // Register
 export const register = async (req, res) => {
   try {
     const { fullName, email, username, phoneNumber, password, role } = req.body;
 
-    if (!role || !['user', 'guide'].includes(role)) {
-      return res.status(400).json({ success: false, message: 'Invalid role' });
-    }
-
     const emailExists = await User.findOne({ email });
     const usernameExists = await User.findOne({ username });
 
-    if (emailExists) return res.json({ success: false, message: 'Email already exists' });
-    if (usernameExists) return res.json({ success: false, message: 'Username already exists' });
+    if (emailExists) return res.status(400).json({ success: false, message: 'Email already exists' });
+    if (usernameExists) return res.status(400).json({ success: false, message: 'Username already exists' });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashPassword(password);
 
     const newUser = new User({
       fullName,
@@ -28,11 +25,14 @@ export const register = async (req, res) => {
     });
 
     await newUser.save();
+
+    const token = generateToken(newUser);
     const { password: _, ...userWithoutPassword } = newUser.toObject();
-    return res.json({ success: true, data: userWithoutPassword });
+
+    res.json({ success: true, data: userWithoutPassword, token });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
@@ -41,22 +41,24 @@ export const login = async (req, res) => {
   try {
     const { emailOrUsername, password } = req.body;
 
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       $or: [
         { email: emailOrUsername },
         { username: emailOrUsername }
       ]
     });
 
-    if (!user) return res.json({ success: false, message: 'User not found' });
+    if (!user) return res.status(400).json({ success: false, message: 'User not found' });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.json({ success: false, message: 'Wrong password' });
+    const isMatch = await comparePassword(password, user.password);
+    if (!isMatch) return res.status(400).json({ success: false, message: 'Wrong password' });
 
+    const token = generateToken(user);
     const { password: _, ...userWithoutPassword } = user.toObject();
-    return res.json({ success: true, data: userWithoutPassword });
+
+    res.json({ success: true, data: userWithoutPassword, token });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
