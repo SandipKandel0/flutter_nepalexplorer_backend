@@ -1,6 +1,7 @@
 import express from 'express';
-import { register, login, loginGuide} from '../controllers/authController.js';
+import { register, login} from '../controllers/authController.js';
 import { validateRegister } from '../validators/userValidator.js';
+import { loginGuide } from '../controllers/guideController.js';
 
 const router = express.Router();
 
