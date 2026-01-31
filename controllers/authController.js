@@ -108,4 +108,50 @@ export const login = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
+
 };
+// GET /auth/profile
+export const getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // from JWT middleware
+    const user = await User.findById(userId).select('-password');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    let guide = null;
+    if (user.role === 'guide') {
+      guide = await Guide.findOne({ userId: user._id });
+    }
+
+    res.json({ success: true, data: { user, guide } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// PUT /auth/profile
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { fullName, phoneNumber } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { fullName, phoneNumber },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    let guide = null;
+    if (user.role === 'guide') {
+      guide = await Guide.findOne({ userId: user._id });
+    }
+
+    res.json({ success: true, data: { user, guide } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
