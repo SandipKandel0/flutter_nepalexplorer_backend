@@ -6,6 +6,8 @@ import path from 'path';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import guideRoutes from './routes/guideRoutes.js';
+import requestRoutes from './routes/requestRoutes.js';
+import notificationsRoutes from './routes/notificationsRoutes.js';
 
 const app = express();
 
@@ -55,6 +57,8 @@ app.use('/uploads', express.static('uploads'));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/guides', guideRoutes);
+app.use('/api', requestRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Make upload middleware available for routes
 app.locals.upload = upload;

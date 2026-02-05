@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { getGuideProfile, updateGuideProfile } from '../controllers/guideController.js';
+import { getAllGuides } from '../controllers/requestController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -31,6 +32,9 @@ const upload = multer({
     }
   }
 });
+
+// Public route - get all guides
+router.get('/list', getAllGuides);
 
 router.get('/profile', authMiddleware, getGuideProfile);
 router.post('/profile', authMiddleware, upload.single('profilePicture'), updateGuideProfile);
