@@ -18,8 +18,18 @@ export const loginGuide = async (req, res) => {
     if (!isMatch) return res.status(400).json({ success: false, message: 'Wrong password' });
 
     // Fetch guide profile linked to this user
-    const guide = await Guide.findOne({ userId: user._id });
-    if (!guide) return res.status(404).json({ success: false, message: 'Guide profile not found' });
+    let guide = await Guide.findOne({ userId: user._id });
+    
+    // If guide profile doesn't exist, create one
+    if (!guide) {
+      guide = new Guide({
+        userId: user._id,
+        bio: '',
+        languages: [],
+        experience: 0,
+      });
+      await guide.save();
+    }
 
     const token = generateToken(user);
     const { password: _, ...userWithoutPassword } = user.toObject();
@@ -35,10 +45,22 @@ export const loginGuide = async (req, res) => {
 // getGuide
 export const getGuideProfile = async (req, res) => {
   try {
-    const guide = await Guide.findOne({ userId: req.user._id }).populate('userId', '-password');
-    if (!guide) return res.status(404).json({ success: false, message: 'Guide not found' });
+    let guide = await Guide.findOne({ userId: req.user.id }).populate('userId', '-password');
+    
+    // If guide profile doesn't exist, create one
+    if (!guide) {
+      const newGuide = new Guide({
+        userId: req.user.id,
+        bio: '',
+        languages: [],
+        experience: 0,
+      });
+      await newGuide.save();
+      // Fetch and populate the newly created guide
+      guide = await Guide.findOne({ userId: req.user.id }).populate('userId', '-password');
+    }
 
-    res.json({ success: true, data: guide });
+    res.json({ success: true, data: { guide, user: guide.userId } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: err.message });
@@ -48,15 +70,25 @@ export const getGuideProfile = async (req, res) => {
 // update profile
 export const updateGuideProfile = async (req, res) => {
   try {
-    const { bio, languages } = req.body;
-    const guide = await Guide.findOne({ userId: req.user._id });
+    const { bio, languages, experience } = req.body;
+    const guide = await Guide.findOne({ userId: req.user.id });
     if (!guide) return res.status(404).json({ success: false, message: 'Guide not found' });
 
+    // Update guide fields
     guide.bio = bio || guide.bio;
-    guide.languages = languages || guide.languages;
+    guide.languages = languages ? (typeof languages === 'string' ? languages.split(',').map(l => l.trim()) : languages) : guide.languages;
+    guide.experience = experience ? parseInt(experience) : guide.experience;
+
+    // Handle file upload
+    if (req.file) {
+      guide.profilePicture = `/uploads/${req.file.filename}`;
+    }
+
     await guide.save();
 
-    res.json({ success: true, data: guide });
+    // Return updated guide with user info
+    const populatedGuide = await guide.populate('userId', '-password');
+    res.json({ success: true, data: { guide: populatedGuide, user: populatedGuide.userId } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: err.message });

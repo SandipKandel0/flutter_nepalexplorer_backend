@@ -135,9 +135,19 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id;
     const { fullName, phoneNumber } = req.body;
 
+    // Prepare update object
+    const updateData = {};
+    if (fullName) updateData.fullName = fullName;
+    if (phoneNumber) updateData.phoneNumber = phoneNumber;
+
+    // Handle file upload
+    if (req.file) {
+      updateData.profilePicture = `/uploads/${req.file.filename}`;
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
-      { fullName, phoneNumber },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
 

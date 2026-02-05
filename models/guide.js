@@ -6,6 +6,7 @@ const guideSchema = new mongoose.Schema(
     bio: { type: String, trim: true },
     languages: [{ type: String }],
     experience: { type: Number }, // years of experience
+    profilePicture: { type: String, default: null }, // URL to profile picture
     availability: { type: Boolean, default: true },
   },
   { collection: 'guides', timestamps: true }
