@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { register, login,getProfile,updateProfile} from '../controllers/authController.js';
+import { register, login,getProfile,updateProfile, forgotPassword } from '../controllers/authController.js';
 import { validateRegister } from '../validators/userValidator.js';
 import { loginGuide } from '../controllers/guideController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
@@ -37,6 +37,7 @@ const upload = multer({
 router.post('/register', validateRegister, register);
 router.post('/login', login);
 router.post('/loginGuide', loginGuide);
+router.post('/forgot-password', forgotPassword);
 router.get('/profile', authMiddleware, getProfile);
 router.post('/profile', authMiddleware, upload.single('profilePicture'), updateProfile); 
 

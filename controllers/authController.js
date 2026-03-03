@@ -3,9 +3,47 @@ import Guide from '../models/guide.js';
 import { hashPassword, comparePassword } from '../utils/passwordUtils.js';
 import { generateToken } from '../services/jwtService.js';
 
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email, role, newPassword, confirmPassword } = req.body;
+
+    if (!email || !role || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, role, new password and confirm password are required',
+      });
+    }
+
+    if (!['user', 'guide'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match' });
+    }
+
+    const user = await User.findOne({ email, role });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Account not found for this role' });
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: `${role} password updated successfully`,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 export const register = async (req, res) => {
   try {
-    const { fullName, email, username, phoneNumber, password, role } = req.body;
+    const { fullName, email, username, phoneNumber, password, role, bio, languages, experience } = req.body;
 
     if (!fullName || !email || !username || !password || !role) {
       return res.status(400).json({ success: false, message: 'All fields are required' });
@@ -36,6 +74,16 @@ export const register = async (req, res) => {
 
 
     if (role === 'guide') {
+      const parsedLanguages = Array.isArray(languages)
+        ? languages.filter((item) => typeof item === 'string' && item.trim() !== '')
+        : typeof languages === 'string'
+          ? languages.split(',').map((item) => item.trim()).filter((item) => item !== '')
+          : [];
+
+      const parsedExperience = Number.isFinite(Number(experience))
+        ? Number(experience)
+        : 0;
+
       const newUser = new User({
         fullName,
         email,
@@ -48,9 +96,9 @@ export const register = async (req, res) => {
 
       const newGuide = new Guide({
         userId: newUser._id,
-        experience: 0,
-        languages: [],
-        bio: '',
+        experience: parsedExperience,
+        languages: parsedLanguages,
+        bio: typeof bio === 'string' ? bio : '',
         rating: 0,
         isAvailable: true,
       });
